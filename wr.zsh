@@ -1,4 +1,16 @@
+#!/usr/bin/env zsh
 FILEPREFIX=/tmp/wr_
+
+function wrd () {
+	t=$(cat $FILEPREFIX"running"|head -1)
+	echo "Sure you want to drop current task ? [y/n]"
+	echo "$t"
+	read yn
+	if [[ "$yn" =~ 'y*' ]]; then
+		sed -i '1d' $FILEPREFIX"running"
+		echo "$t" >> $FILEPREFIX"finished"
+	fi
+}
 
 function wra () {
 	if ! [ -e $FILEPREFIX"running" ]; then
@@ -64,7 +76,6 @@ function __wrs () {
 		due_time=$(date +%s -d "$due_time")
 		now=$(date +%s)
 		passed=$(((now - due_time)/60))
-		echo $passed
 		if [ "$passed" -gt 120 ]; then
 			echo -e '\e[5mRemind ! Unhandled finishing task' >&2
 		fi
@@ -87,21 +98,18 @@ function wrh() {
 	cat $FILEPREFIX"finishing" | while read task; do
 		echo "$task. Finished Yet ? [y/n]"
 		yn=''
-		echo "FUCK" $ync
 		while [ -z "$yn" ]; do
-			# WHY DIDN"T STOP HERE?????????
-			read yn
-			yn='y'
+			read yn < /dev/tty
 			case "$yn" in
-				Y|y)* yn='y'; break ;;
-				N|n)* yn='n'; break ;;
+				([Y|y]*) yn='y'; break ;;
+				([N|n]*) yn='n'; break ;;
 				*) yn='' ;;
 			esac
 			echo -n $yn
 		done
 		if [ "$yn" = "n" ] || [ "$yn" = "N" ]; then
-			echo "Reschedule within how many minutes ?  [Enter to drop]"
-			read min
+			echo "Reschedule within how many minutes ?  [Or Enter to drop]"
+			read min < /dev/tty
 			if [[ "$min" =~ "" ]]; then
 				echo -n 'Unfinished ' >> $FILEPREFIX"finished"
 				cat $FILEPREFIX"finishing"|head -1|tee -a $FILEPREFIX"finished"
@@ -127,4 +135,5 @@ case "$command" in
 	("show") wrs ;;
 	("prompt") wrp ;;
 	("handle") wrh ;;
+	("drop") wrd ;;
 esac
